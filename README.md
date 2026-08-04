@@ -1,10 +1,10 @@
 # *In Situ* Training of Implicit Neural Compressors for Scientific Simulations via Sketch-Based Regularization
 
-### [arXiv](https://arxiv.org/abs/2511.02659)
+### [JCP](https://doi.org/10.1016/j.jcp.2026.115245) | [arXiv](https://arxiv.org/abs/2511.02659)
 
 [Cooper Simpson](https://rs-coop.github.io/), [Stephen Becker](https://stephenbeckr.github.io/), [Alireza Doostan](https://www.colorado.edu/lab/uq-data-driven-modeling/)
 
-Submitted to [Journal of Computational Physics](https://www.sciencedirect.com/journal/journal-of-computational-physics)
+Published in [Journal of Computational Physics](https://www.sciencedirect.com/journal/journal-of-computational-physics)
 
 ## Abstract
 
