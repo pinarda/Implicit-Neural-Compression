@@ -16,11 +16,13 @@ All source code is made available under an MIT license. You can freely use and m
 Our work can be cited using the following bibtex entry:
 ```bibtex
 @article{simpson2025insitu,
-  title = {{In Situ Training of Implicit Neural Compressors for Scientific Simulations via Sketch-Based Regularization}},
-  author = {Simpson, Cooper and Becker, Stephen and Doostan, Alireza},
-  year = {2025},
-  journal = {arXiv},
-  url = {https://arxiv.org/abs/2511.02659}
+  title={In Situ Training of Implicit Neural Compressors for Scientific Simulations via Sketch-Based Regularization},
+  author={Simpson, Cooper and Becker, Stephen and Doostan, Alireza},
+  year={2026},
+  journal={Journal of Computational Physics},
+  volume={566},
+  publisher={Elsevier}
+  doi={10.1016/j.jcp.2026.115245}
 }
 ```
 
