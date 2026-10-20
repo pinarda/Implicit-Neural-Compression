@@ -42,7 +42,9 @@ class Model(LightningModule):
             scheduler = False,
             output_activation = "Identity",
             sketch_type = None,
-            loss_threshold = 1e-2
+            loss_threshold = 1e-2,
+            keyframe_weight=0.0,
+            sketch_weight=5.0,
         ):
         super().__init__()
 
@@ -103,6 +105,9 @@ class Model(LightningModule):
         self.loss_threshold = loss_threshold
         self.cycles = cycles
 
+        self.sketch_weight = sketch_weight
+        self.keyframe_weight = keyframe_weight
+
         return
     
     @property
@@ -112,8 +117,9 @@ class Model(LightningModule):
     def unpack(self, batch):
         full = batch.get("full", (None, None))
         sketch = batch.get("sketch", (None, None, None))
+        keyframe = batch.get("keyframe", (None, None))
 
-        return full, sketch
+        return full, sketch, keyframe
 
     '''
     [Optional] A forward eavaluation of the network.
@@ -148,16 +154,18 @@ class Model(LightningModule):
 
         if self.compute:
 
-            (c1, f1), (c2, f2, s) = self.unpack(batch)
+            (c1, f1), (c2, f2, s), (c3, f3) = self.unpack(batch)
 
             l1 = self.loss_fn(self(c1), f1) if c1 is not None else torch.tensor([0.0], requires_grad=True, device=self.device)
             l2 = self.loss_fn(sketch(self(c2), s, sketch_type=self.sketch_type, device=self.device), f2) if c2 is not None else torch.tensor([0.0], requires_grad=True, device=self.device) #sketch loss
             # l2 = self.compute_reg(c2[0]) if c2 is not None else torch.tensor([0.0], requires_grad=True, device=self.device) #hypernet output loss #NOTE: HREG
+            l3 = self.loss_fn(self(c3), f3) if c3 is not None else torch.tensor([0.0], requires_grad=True, device=self.device)
 
-            loss = l1 + 5*l2
+            loss = l1 + self.sketch_weight*l2 * self.keyframe_weight*l3
 
             self.log('loss_full', l1, on_step=True, on_epoch=False, sync_dist=True, batch_size=f1.shape[0] if f1 is not None else 1)
             self.log('loss_reg', l2, on_step=True, on_epoch=False, sync_dist=True, batch_size=f2.shape[0] if f2 is not None else 1)
+            self.log('loss_key', l3, on_step=True, on_epoch=False, sync_dist=True, batch_size=f3.shape[0] if f3 is not None else 1)
 
             target_loss = l1 if c1 is not None else l2
 

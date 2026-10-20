@@ -10,7 +10,7 @@ from collections import deque
 
 class Buffer(Sampler):
 
-    def __init__(self, T, size=1, cycles=1, batch_size=1, step=1, delay=False):
+    def __init__(self, T, size=1, cycles=1, batch_size=1, step=1, keyframe_stride=1, exclude_keyframes=False, delay=False):
         #Hyperparameters
         self.T = T
 
@@ -23,10 +23,13 @@ class Buffer(Sampler):
         self.batch_size = batch_size
         self.step = step
         self.delay = delay
+        self.keyframe_stride = keyframe_stride
+        self.exclude_keyframes = exclude_keyframes
 
         assert (0<self.size and self.size<=self.T), f"Buffer size ({self.size}) must be positive and no larger than time horizon ({self.T})"
         assert (0<self.batch_size and self.batch_size<=self.size), f"Batch size ({self.batch_size}) must be positive and no larger than buffer size ({self.size})"
         assert (0<self.step and self.step<=self.T+self.size), f"Step ({self.step}) must be positive and no larger than ({self.T+self.size})"
+        assert (keyframe_stride>1, f"Keyframe stride must be a positive integer")
 
         #Buffer
         self.buffer = deque(maxlen=self.size)
@@ -50,7 +53,12 @@ class Buffer(Sampler):
             #update buffer
             for idx in range(i,i+self.step):
                 if idx < self.T:
-                    self.buffer.append(idx)
+                    is_keyframe = idx % self.keyframe_stride == 0
+                    if self.exclude_keyframes:
+                        if not is_keyframe:
+                            self.buffer.append(idx)
+                    elif is_keyframe:
+                        self.buffer.append(idx)
                 else:
                     self.buffer.popleft()
 

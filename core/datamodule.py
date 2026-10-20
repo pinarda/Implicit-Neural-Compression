@@ -63,7 +63,8 @@ class DataModule(LightningDataModule):
             shuffle = True,
             num_workers = 4,
             persistent_workers = True,
-            pin_memory = True
+            pin_memory = True,
+            keyframes = False
         ):
         super().__init__()
 
@@ -89,6 +90,8 @@ class DataModule(LightningDataModule):
         #Buffer training
         self.online = True if self.buffer else False
 
+        # Keyframe status
+        self.keyframes = keyframes
         return
     
     @property
@@ -159,6 +162,13 @@ class DataModule(LightningDataModule):
                                             collate_fn=lambda x: x)
                 
                 loaders["sketch"] = sketch_loader
+
+            if self.buffer.get("keyframe"):
+                keyframe_loader = DataLoader(self.train, batch_sampler=Buffer(self.train.num_snapshots//self.time_span, **self.buffer['keyframe']), num_workers=self.num_workers*self.trainer.num_devices,
+                                            persistent_workers=self.persistent_workers,
+                                            pin_memory=self.pin_memory,
+                                            collate_fn=lambda x: x) 
+                loaders["keyframe"] = keyframe_loader
 
             return CombinedLoader(loaders, mode='max_size_cycle')
 
