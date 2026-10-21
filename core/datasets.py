@@ -6,6 +6,8 @@ LightningDataModule documentation:
 '''
 
 import pathlib
+
+import pylab as pl
 from natsort import natsorted
 from warnings import warn
 
@@ -14,6 +16,22 @@ import torch
 from torch.utils.data import Dataset
 
 from core.utils.sketch import sketch
+from functools import partial
+
+def denormalize_points(p, mx, mi):
+    return ((p + 1) / 2) * (mx - mi).to(p.device) + mi.to(p.device)
+
+def denormalize_z_score(f, stdv, max, mean):
+     return stdv.to(f.device) * f * max.to(f.device) + mean.to(f.device)
+
+def denormalize_neg_one_one(f, mx_f, mi_f):
+    return ((mx_f-mi_f).to(f.device)*((f+1)/2) + mi_f.to(f.device))
+
+def denormalize_zero_one(f, mx_f, mi_f):
+    return (mx_f - mi_f).to(f.device) * f + mi_f.to(f.device)
+
+def identity(p):
+    return p
 
 '''
 '''
@@ -73,7 +91,7 @@ class SingleDataset(Dataset):
         mi = torch.amin(self.points, dim=(0,1))
         self.points = 2*(self.points-mi)/(mx-mi)-1
 
-        self.denorm_p = lambda p: ((p+1)/2)*(mx-mi).to(p.device) + mi.to(p.device)
+        self.denorm_p = partial(denormalize_points, mx, mi)
         
         #normalize features
         if normalize != False:
@@ -88,7 +106,7 @@ class SingleDataset(Dataset):
 
                 features = features/max
 
-                self.denorm_f = lambda f: stdv.to(f.device)*f*max.to(f.device) + mean.to(f.device)
+                self.denorm_f = partial(denormalize_z_score, stdv=stdv, max=max, mean=mean)
 
                 print("\nUsing clipped z-score normalization")
 
@@ -96,7 +114,7 @@ class SingleDataset(Dataset):
                 mi_f, mx_f = torch.amin(features, dim=(0,1)), torch.amax(features, dim=(0,1))
                 features = (features-mi_f)/(mx_f-mi_f)
 
-                self.denorm_f = lambda f: (mx_f-mi_f).to(f.device)*f + mi_f.to(f.device)
+                self.denorm_f = partial(denormalize_zero_one, mx_f=mx_f, mi_f=mi_f)
 
                 print("\nUsing 0-1 normalization")
 
@@ -104,7 +122,7 @@ class SingleDataset(Dataset):
                 mi_f, mx_f = torch.amin(features, dim=(0,1)), torch.amax(features, dim=(0,1))
                 features = 2*(features-mi_f)/(mx_f-mi_f)-1
 
-                self.denorm_f = lambda f: (mx_f-mi_f).to(f.device)*((f+1)/2) + mi_f.to(f.device)
+                self.denorm_f = partial(denormalize_neg_one_one, mx_f=mx_f, mi_f=mi_f)
 
                 print("\nUsing -1-1 normalization")
 
@@ -112,7 +130,7 @@ class SingleDataset(Dataset):
                 raise Exception(f"Normalization type {normalize} is not valid.")
             
         else:
-            self.denorm_f = lambda f: f
+            self.denorm_f = identity
 
             print("\nNot normalizing features")
 
@@ -275,13 +293,13 @@ class MultiDataset(Dataset):
         mi = torch.amin(self.points, dim=(0,1))
         self.points = 2*(self.points-mi)/(mx-mi)-1
 
-        self.denorm_p = lambda p: ((p+1)/2)*(mx-mi).to(p.device) + mi.to(p.device)
+        self.denorm_p = partial(denormalize_points, mx=mx, mi=mi)
         
         #Normalize features
         if normalize != False:
             raise NotImplementedError("Normalization not implemented for multi-file dataset.")
         
-        self.denorm_f = lambda f: f
+        self.denorm_f = identity
 
         #
         self.num_points = self.points.shape[1]

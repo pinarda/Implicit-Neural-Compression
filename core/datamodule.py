@@ -35,6 +35,8 @@ def get_sketch_dataset(dataset, **kwargs):
     else:
         raise ValueError()
 
+def identity_collate(batch):
+    return batch
 ################################################################################
 
 '''
@@ -149,7 +151,7 @@ class DataModule(LightningDataModule):
                                             num_workers=self.num_workers*self.trainer.num_devices,
                                             persistent_workers=self.persistent_workers,
                                             pin_memory=self.pin_memory,
-                                            collate_fn=lambda x: x)
+                                            collate_fn=identity_collate)
                 
                 loaders["full"] = full_loader
 
@@ -159,7 +161,7 @@ class DataModule(LightningDataModule):
                                             num_workers=self.num_workers*self.trainer.num_devices,
                                             persistent_workers=self.persistent_workers,
                                             pin_memory=self.pin_memory,
-                                            collate_fn=lambda x: x)
+                                            collate_fn=identity_collate)
                 
                 loaders["sketch"] = sketch_loader
 
@@ -167,7 +169,7 @@ class DataModule(LightningDataModule):
                 keyframe_loader = DataLoader(self.train, batch_sampler=Buffer(self.train.num_snapshots//self.time_span, **self.buffer['keyframe']), num_workers=self.num_workers*self.trainer.num_devices,
                                             persistent_workers=self.persistent_workers,
                                             pin_memory=self.pin_memory,
-                                            collate_fn=lambda x: x) 
+                                            collate_fn=identity_collate)
                 loaders["keyframe"] = keyframe_loader
 
             return CombinedLoader(loaders, mode='max_size_cycle')
@@ -179,7 +181,7 @@ class DataModule(LightningDataModule):
                             num_workers=self.num_workers*self.trainer.num_devices,
                             persistent_workers=self.persistent_workers,
                             pin_memory=self.pin_memory,
-                            collate_fn=lambda x: x)
+                            collate_fn=identity_collate)
 
     '''
     Used in Trainer.fit
@@ -190,7 +192,7 @@ class DataModule(LightningDataModule):
                             num_workers=self.num_workers*self.trainer.num_devices,
                             persistent_workers=self.persistent_workers,
                             pin_memory=self.pin_memory,
-                            collate_fn=lambda x: x)
+                            collate_fn=identity_collate)
     '''
     [Optional] Used in Trainer.test
     '''
@@ -200,7 +202,7 @@ class DataModule(LightningDataModule):
                             num_workers=self.num_workers*self.trainer.num_devices,
                             persistent_workers=self.persistent_workers,
                             pin_memory=self.pin_memory,
-                            collate_fn=lambda x: x)
+                            collate_fn=identity_collate)
     '''
     [Optional] Used in Trainer.predict
     '''
@@ -210,7 +212,7 @@ class DataModule(LightningDataModule):
                             num_workers=self.num_workers*self.trainer.num_devices,
                             persistent_workers=self.persistent_workers,
                             pin_memory=self.pin_memory,
-                            collate_fn=lambda x: x)
+                            collate_fn=identity_collate)
     '''
     [Optional] Clean up data
     '''

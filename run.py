@@ -17,61 +17,65 @@ import yaml
 
 from core import train, test
 
-torch.set_float32_matmul_precision('medium') #or 'high'
+def main():
+    torch.set_float32_matmul_precision('medium') #or 'high'
 
-#Parse args
-parser = argparse.ArgumentParser()
-parser.add_argument('--mode', type=str, default=None, help='train or test.')
-parser.add_argument('--config', type=str, default=None, help='YAML configuration file path relative to ./experiments with or without extension.')
+    #Parse args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, default=None, help='train or test.')
+    parser.add_argument('--config', type=str, default=None, help='YAML configuration file path relative to ./experiments with or without extension.')
 
-args = vars(parser.parse_known_args()[0])
-mode = args['mode']
-config_path = args['config']
+    args = vars(parser.parse_known_args()[0])
+    mode = args['mode']
+    config_path = args['config']
 
-#Load config
-if config_path != None:
+    #Load config
+    if config_path != None:
 
-    print(f"\nRunning experiment: {config_path}")
+        print(f"\nRunning experiment: {config_path}")
 
-    if mode == 'train':
-        config_file = os.path.join('experiments/', config_path+'.yaml')
-    elif mode == 'test':
-        config_file = os.path.join('lightning_logs/', config_path, 'config.yaml')
+        if mode == 'train':
+            config_file = os.path.join('experiments/', config_path+'.yaml')
+        elif mode == 'test':
+            config_file = os.path.join('lightning_logs/', config_path, 'config.yaml')
+        else:
+            raise ValueError(f"Mode {mode} is invalid.")
+
+        try:
+            #Open YAML file
+            with open(config_file, "r") as file:
+                config = yaml.safe_load(file)
+
+        except Exception as e:
+            raise ValueError(f"Config {config_path} is invalid.")
+
     else:
-        raise ValueError(f"Mode {mode} is invalid.")
+        raise ValueError("An experiment configuration file must be provided.")
 
-    try:
-        #Open YAML file
-        with open(config_file, "r") as file:
-            config = yaml.safe_load(file)
+    #Trainer args
+    trainer_parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
+    trainer_parser.add_argument('--default_root_dir', type=str)
+    trainer_parser.add_argument('--max_time', type=str)
 
-    except Exception as e:
-        raise ValueError(f"Config {config_path} is invalid.")
+    #Look for trainer CL arguments
+    config['train'].update(vars(trainer_parser.parse_known_args()[0]))
 
-else:
-    raise ValueError("An experiment configuration file must be provided.")
+    #Data args
+    data_parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
+    data_parser.add_argument('--data_dir', type=str)
 
-#Trainer args
-trainer_parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
-trainer_parser.add_argument('--default_root_dir', type=str)
-trainer_parser.add_argument('--max_time', type=str)
+    #Look for data CL arguments
+    config['data'].update(vars(data_parser.parse_known_args()[0]))
 
-#Look for trainer CL arguments
-config['train'].update(vars(trainer_parser.parse_known_args()[0]))
+    #Train
+    if mode == 'train':
+        train(config_path, config)
 
-#Data args
-data_parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
-data_parser.add_argument('--data_dir', type=str)
+    #Test
+    elif mode == 'test':
+        log_dir = os.path.join('lightning_logs/', config_path)
 
-#Look for data CL arguments
-config['data'].update(vars(data_parser.parse_known_args()[0]))
+        test(log_dir, config)
 
-#Train
-if mode == 'train':
-    train(config_path, config)
-
-#Test
-elif mode == 'test':
-    log_dir = os.path.join('lightning_logs/', config_path)
-
-    test(log_dir, config)
+if __name__ == '__main__':
+    main()
