@@ -186,13 +186,59 @@ class SketchSingleDataset(SingleDataset):
         ):
 
         #hyper-parameters
+        self.sketch_type = sketch_type
         self.num_points = dataset.num_points
         self.num_snapshots = dataset.num_snapshots
         self.time_span = dataset.time_span
         self.rank = round(sample_factor*dataset.num_points)
-
+        leverage_history = 10
+        
         #Initialize data
         self.points = dataset.points
+
+        if sketch_type == "leverage":
+            indices_by_time = []
+            weights_by_time = []
+
+            for t in range(self.num_snapshots):
+
+                start = max(0, t - leverage_history)
+                window = dataset.features[start:t + 1]
+        
+                # [window_time, N, C] -> [N, window_time*C]
+                A = window.permute(1, 0, 2).reshape(
+                    self.num_points,
+                    -1,
+                )
+
+                U, E, V = torch.linalg.svd(A, full_matrices = False)
+                self.leverage_scores = U.square().sum(dim=1)
+                self.sample_probabilities = self.leverage_scores / self.leverage_scores.sum()
+                indices = torch.multinomial(
+                    self.sample_probabilities,
+                    num_samples=self.rank,
+                    replacement=True,
+                )
+            
+                weights = torch.rsqrt(
+                    self.rank *
+                    self.sample_probabilities[indices]
+                )
+
+                indices_by_time.append(indices)
+                weights_by_time.append(weights)
+
+            self.indices = torch.stack(indices_by_time)
+            self.weights = torch.stack(weights_by_time)
+            
+            self.features = sketch(
+                dataset.features,
+                (self.indices, self.weights),
+                sketch_type="leverage",
+            )
+            
+            return
+
 
         #Sketching seeds and sketch features
         #NOTE: I think this isn't ideal, but there are some issues trying to generate seeds other ways
@@ -217,9 +263,38 @@ class SketchSingleDataset(SingleDataset):
         x_coord = self.points[idxs,:,:]
 
         #Features
-        features = self.features[idxs,:,:]
+        #features = self.features[idxs,:,:]
 
-        return (t_coord, x_coord), torch.flatten(features, start_dim=0, end_dim=1), (self.seeds[idxs], self.rank)
+        #return (t_coord, x_coord), torch.flatten(features, start_dim=0, end_dim=1), (self.seeds[idxs], self.rank)
+        features = torch.flatten(
+            self.features[idxs, :, :],
+            start_dim=0,
+            end_dim=1,
+        )
+    
+        if self.sketch_type == "leverage":
+            indices = torch.flatten(
+                self.indices[idxs, :],
+                start_dim=0,
+                end_dim=1,
+            )
+    
+            weights = torch.flatten(
+                self.weights[idxs, :],
+                start_dim=0,
+                end_dim=1,
+            )
+    
+            sketch_stuff = (indices, weights)
+    
+        else:
+            sketch_stuff = (
+                self.seeds[idxs],
+                self.rank,
+            )
+
+        return (t_coord, x_coord), features, sketch_stuff
+        
     
 #################################################
 

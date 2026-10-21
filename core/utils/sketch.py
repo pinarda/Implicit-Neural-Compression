@@ -2,6 +2,10 @@ import torch
 import numpy as np
 
 def sketch(features, sketch_stuff, sketch_type="fjlt", device='cpu'):
+    if sketch_type == "leverage":
+        indices, weights = sketch_stuff
+        return leverage(features, indices, weights, device)
+    
     seeds, rank = sketch_stuff
 
     seeds = seeds.reshape(-1)
@@ -32,6 +36,29 @@ def sketch(features, sketch_stuff, sketch_type="fjlt", device='cpu'):
 #     seeds = seeds.reshape(-1)
 
 #     return torch.vmap(self.fjlt, randomness="different")(features, seeds)
+
+#################################################
+# Leverage-based subsampling method
+def leverage(features, indices, weights, device):
+    indices = indices.to(device=device, dtype=torch.long)
+    weights = weights.to(
+        device=device,
+        dtype=features.dtype,
+    )
+
+    gather_indices = indices.unsqueeze(-1).expand(
+        -1,
+        -1,
+        features.shape[-1],
+    )
+
+    selected = torch.gather(
+        features,
+        dim=1,
+        index=gather_indices,
+    )
+
+    return selected * weights.unsqueeze(-1)
 
 #################################################
 #Subsample
