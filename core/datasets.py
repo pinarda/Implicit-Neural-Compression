@@ -91,7 +91,7 @@ class SingleDataset(Dataset):
         mi = torch.amin(self.points, dim=(0,1))
         self.points = 2*(self.points-mi)/(mx-mi)-1
 
-        self.denorm_p = partial(denormalize_points, mx, mi)
+        self.denorm_p = partial(denormalize_points, mx=mx, mi=mi)
         
         #normalize features
         if normalize != False:
