@@ -161,7 +161,7 @@ class Model(LightningModule):
             # l2 = self.compute_reg(c2[0]) if c2 is not None else torch.tensor([0.0], requires_grad=True, device=self.device) #hypernet output loss #NOTE: HREG
             l3 = self.loss_fn(self(c3), f3) if c3 is not None else torch.tensor([0.0], requires_grad=True, device=self.device)
 
-            loss = l1 + self.sketch_weight*l2 * self.keyframe_weight*l3
+            loss = l1 + self.sketch_weight*l2 + self.keyframe_weight*l3
 
             self.log('loss_full', l1, on_step=True, on_epoch=False, sync_dist=True, batch_size=f1.shape[0] if f1 is not None else 1)
             self.log('loss_reg', l2, on_step=True, on_epoch=False, sync_dist=True, batch_size=f2.shape[0] if f2 is not None else 1)
