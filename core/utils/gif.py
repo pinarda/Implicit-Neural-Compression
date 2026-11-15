@@ -46,7 +46,7 @@ Input:
     datamodule: data module
     model: model to use or none to use best checkpoint
 '''
-def make_gif(trainer, datamodule, model):
+def make_gif(trainer, datamodule, model, prefix=""):
     #run on test data
     #NOTE: This context shouldn't be required, but something must be broken in Lightning
     with torch.inference_mode():
@@ -105,7 +105,7 @@ def make_gif(trainer, datamodule, model):
         # gif.options.matplotlib["bbox"] = 'tight'
 
         #save gif
-        gif.save(frames, f'{trainer.logger.log_dir}/predict_channel-{c}.gif', duration=100)
+        gif.save(frames, f'{trainer.logger.log_dir}/{prefix}predict_channel-{c}.gif', duration=100)
 
     print("GIFs completed")
 
