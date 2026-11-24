@@ -22,7 +22,7 @@ Input:
 def mse(preds, targets, dim=1):
     assert preds.shape == targets.shape, f"{preds.shape} does not equal {targets.shape}"
 
-    return torch.sum((preds-targets)**2, dim=dim) 
+    return torch.mean((preds-targets)**2, dim=dim)
 
 class MSE(Metric):
     
