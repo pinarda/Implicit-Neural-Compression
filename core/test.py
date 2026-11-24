@@ -112,6 +112,7 @@ def quantization_test(config, model, trainer, datamodule):
     if 'quantization' in config['misc']:
         quantization_types = config['misc']['quantization'].get('types', None)
         bits_list = config['misc']['quantization'].get('bits', [8])
+        compand = config['misc']['quantization'].get('compand', True)
 
     orig_model = model
 
@@ -122,14 +123,15 @@ def quantization_test(config, model, trainer, datamodule):
             bits = bits_list[i]
             print(f"Testing quantization type: {quantization_type}")
 
-            quantized_parameters, scale, parameters_size = quantize_parameters(model, method=quantization_type,
-                                                                               bits=bits, block_size=None, seed=0)
-            dequantized_parameters = dequantize_parameters(quantized_parameters, scale, original_size=parameters_size,
-                                                           method=quantization_type, bits=bits, seed=0)
+            quantized_parameters, metadata = quantize_parameters(model, method=quantization_type,
+                                                                               bits=bits, block_size=None, seed=0, compand=compand)
+            dequantized_parameters = dequantize_parameters(quantized_parameters, metadata,
+                                                           method=quantization_type, bits=bits, seed=0, compand=compand)
 
             # Compute the compression factor by comparing the total bits in the datamodule and the quantized model parameters
             orig_size = datamodule.test.size * datamodule.test.features.element_size() * 8
-            quantized_size = quantized_parameters.numel() * quantized_parameters.element_size() * 8 + scale.numel() * scale.element_size() * 8
+            metadata_size = sum(torch.tensor(value).numel() * torch.tensor(value).element_size() * 8 for value in metadata.values())
+            quantized_size = quantized_parameters.numel() * quantized_parameters.element_size() * 8 + metadata_size
             compression_factor = orig_size / quantized_size
             # report the compression factor
             trainer.logger.log_metrics(
